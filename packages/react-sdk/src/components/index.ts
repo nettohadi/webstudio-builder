@@ -25,6 +25,10 @@ import { meta as ListMeta } from "./list.ws";
 import { meta as ListItemMeta } from "./list-item.ws";
 import { meta as SeparatorMeta } from "./separator.ws";
 import { meta as CodeMeta } from "./code.ws";
+import { meta as TabsRootMeta } from "./tabs.ws";
+import { meta as TabsList } from "./tabs-list.ws";
+import { meta as TabsTrigger } from "./tabs-trigger.ws";
+import { meta as TabsContent } from "./tabs-content.ws";
 
 // these are huge JSON objects that we want to be tree-shaken when not used!
 import { propsMeta as SlotMetaPropsMeta } from "./slot.ws";
@@ -51,6 +55,10 @@ import { propsMeta as ListPropsMeta } from "./list.ws";
 import { propsMeta as ListItemPropsMeta } from "./list-item.ws";
 import { propsMeta as SeparatorPropsMeta } from "./separator.ws";
 import { propsMeta as CodePropsMeta } from "./code.ws";
+import { propsMeta as TabsRootPropsMeta } from "./tabs.ws";
+import { propsMeta as TabsListPropsMeta } from "./tabs-list.ws";
+import { propsMeta as TabsTriggerPropsMeta } from "./tabs-trigger.ws";
+import { propsMeta as TabsContentPropsMeta } from "./tabs-content.ws";
 
 // @todo this list should not be hardcoded!
 const defaultMetas: Record<string, WsComponentMeta> = {
@@ -78,6 +86,10 @@ const defaultMetas: Record<string, WsComponentMeta> = {
   ListItem: ListItemMeta,
   Separator: SeparatorMeta,
   Code: CodeMeta,
+  Tabs: TabsRootMeta,
+  TabsList: TabsList,
+  TabsTrigger: TabsTrigger,
+  TabsContent: TabsContent,
 };
 
 let currentMetas = defaultMetas;
@@ -122,6 +134,10 @@ const defaultPropsMetasRaw = {
   ListItem: ListItemPropsMeta,
   Separator: SeparatorPropsMeta,
   Code: CodePropsMeta,
+  Tabs: TabsRootPropsMeta,
+  TabsList: TabsListPropsMeta,
+  TabsTrigger: TabsTriggerPropsMeta,
+  TabsContent: TabsContentPropsMeta,
 } as const;
 
 const defaultPropsMetas: Record<string, WsComponentPropsMeta> =

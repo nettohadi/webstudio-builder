@@ -21,6 +21,7 @@ export const componentCategories = [
   "typography",
   "media",
   "forms",
+  "advanced",
 ] as const;
 
 export const ComponentState = z.object({

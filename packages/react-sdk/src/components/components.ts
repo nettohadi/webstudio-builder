@@ -29,3 +29,7 @@ export { List } from "./list";
 export { ListItem } from "./list-item";
 export { Separator } from "./separator";
 export { Code } from "./code";
+export { Tabs } from "./tabs";
+export { TabsList } from "./tabs-list";
+export { TabsTrigger } from "./tabs-trigger";
+export { TabsContent } from "./tabs-content";
