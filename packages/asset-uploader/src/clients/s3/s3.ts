@@ -1,4 +1,4 @@
-import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { S3Client } from "@aws-sdk/client-s3";
 import type { AssetClient } from "../../client";
 import { uploadToS3 } from "./upload";
 
@@ -23,6 +23,8 @@ export const createS3Client = (options: S3ClientOptions): AssetClient => {
     },
   });
 
+  const authorization = `AWS ${options.accessKeyId}:${options.secretAccessKey}`;
+
   const uploadFile: AssetClient["uploadFile"] = async (request) => {
     return await uploadToS3({
       client,
@@ -34,12 +36,22 @@ export const createS3Client = (options: S3ClientOptions): AssetClient => {
   };
 
   const deleteFile: AssetClient["deleteFile"] = async (name) => {
-    await client.send(
-      new DeleteObjectCommand({
-        Bucket: options.bucket,
-        Key: name,
-      })
-    );
+    const url = new URL(options.endpoint);
+    url.hostname = `${options.bucket}.${url.hostname}`;
+    url.pathname = `/${name}`;
+    const headers = new Headers({
+      Authorization: authorization,
+      "x-amz-region": options.region,
+    });
+    console.log(headers);
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers,
+    });
+
+    console.log("==============");
+    console.log(response.text());
+    console.log("==============");
   };
 
   return {
