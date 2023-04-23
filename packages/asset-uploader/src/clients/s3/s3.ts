@@ -1,7 +1,6 @@
 import { Sha256 } from "@aws-crypto/sha256-js";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { SignatureV4 } from "@aws-sdk/signature-v4";
-import { S3Client } from "@aws-sdk/client-s3";
 import type { AssetClient } from "../../client";
 import { uploadToS3 } from "./upload";
 
@@ -26,21 +25,12 @@ export const createS3Client = (options: S3ClientOptions): AssetClient => {
     sha256: Sha256,
   });
 
-  // @todo find a way to destroy this client to free resources
-  const client = new S3Client({
-    endpoint: options.endpoint,
-    region: options.region,
-    credentials: {
-      accessKeyId: options.accessKeyId,
-      secretAccessKey: options.secretAccessKey,
-    },
-  });
-
   const uploadFile: AssetClient["uploadFile"] = async (request) => {
     return await uploadToS3({
-      client,
+      signer,
       request,
       maxSize: options.maxUploadSize,
+      endpoint: options.endpoint,
       bucket: options.bucket,
       acl: options.acl,
     });
@@ -49,7 +39,7 @@ export const createS3Client = (options: S3ClientOptions): AssetClient => {
   const deleteFile: AssetClient["deleteFile"] = async (name) => {
     const url = new URL(`/${options.bucket}/${name}`, options.endpoint);
 
-    const request = await signer.sign(
+    const s3Request = await signer.sign(
       new HttpRequest({
         method: "DELETE",
         protocol: url.protocol,
@@ -63,8 +53,8 @@ export const createS3Client = (options: S3ClientOptions): AssetClient => {
     );
 
     await fetch(url, {
-      method: request.method,
-      headers: request.headers,
+      method: s3Request.method,
+      headers: s3Request.headers,
     });
   };
 

@@ -1,12 +1,11 @@
 import { z } from "zod";
+import type { SignatureV4 } from "@aws-sdk/signature-v4";
 import {
-  type UploadHandlerPart,
-  unstable_parseMultipartFormData as unstableCreateFileUploadHandler,
-  unstable_composeUploadHandlers as unstableComposeUploadHandlers,
+  type UploadHandler,
+  unstable_parseMultipartFormData as parseMultipartFormData,
+  unstable_composeUploadHandlers as composeUploadHandlers,
   MaxPartSizeExceededError,
 } from "@remix-run/node";
-import type { PutObjectCommandInput, S3Client } from "@aws-sdk/client-s3";
-import { Upload } from "@aws-sdk/lib-storage";
 import { Location } from "@webstudio-is/prisma-client";
 import { toUint8Array } from "../../utils/to-uint8-array";
 import { getAssetData, AssetData } from "../../utils/get-asset-data";
@@ -14,10 +13,7 @@ import { idsFormDataFieldName } from "../../schema";
 import { getUniqueFilename } from "../../utils/get-unique-filename";
 import { sanitizeS3Key } from "../../utils/sanitize-s3-key";
 import { uuidHandler } from "../../utils/uuid-handler";
-
-const AssetsUploadedSuccess = z.object({
-  Location: z.string(),
-});
+import { HttpRequest } from "@aws-sdk/protocol-http";
 
 const Ids = z.array(z.string().uuid());
 
@@ -27,32 +23,32 @@ const Ids = z.array(z.string().uuid());
 const MAX_FILES_PER_REQUEST = 1;
 
 export const uploadToS3 = async ({
-  client,
+  signer,
   request,
   maxSize,
+  endpoint,
   bucket,
   acl,
 }: {
-  client: S3Client;
+  signer: SignatureV4;
   request: Request;
   maxSize: number;
+  endpoint: string;
   bucket: string;
   acl?: string;
 }): Promise<AssetData> => {
-  const uploadHandler = createUploadHandler(MAX_FILES_PER_REQUEST, client);
+  const uploadHandler = createUploadHandler({
+    signer,
+    endpoint,
+    bucket,
+    acl,
+    maxFiles: MAX_FILES_PER_REQUEST,
+    maxSize,
+  });
 
-  const formData = await unstableCreateFileUploadHandler(
+  const formData = await parseMultipartFormData(
     request,
-    unstableComposeUploadHandlers(
-      (file: UploadHandlerPart) =>
-        uploadHandler({
-          file,
-          maxSize,
-          bucket,
-          acl,
-        }),
-      uuidHandler
-    )
+    composeUploadHandlers(uploadHandler, uuidHandler)
   );
 
   const imagesFormData = formData.getAll("image") as Array<string>;
@@ -68,20 +64,24 @@ export const uploadToS3 = async ({
   return assetsData[0];
 };
 
-const createUploadHandler = (maxFiles: number, client: S3Client) => {
+const createUploadHandler = ({
+  signer,
+  endpoint,
+  bucket,
+  acl,
+  maxFiles,
+  maxSize,
+}: {
+  signer: SignatureV4;
+  endpoint: string;
+  bucket: string;
+  acl?: string;
+  maxFiles: number;
+  maxSize: number;
+}): UploadHandler => {
   let count = 0;
 
-  return async ({
-    file,
-    maxSize,
-    bucket,
-    acl,
-  }: {
-    file: UploadHandlerPart;
-    maxSize: number;
-    bucket: string;
-    acl?: string;
-  }): Promise<string | undefined> => {
+  return async (file) => {
     if (file.filename === undefined) {
       // Do not parse if it's not a file
       return;
@@ -113,24 +113,37 @@ const createUploadHandler = (maxFiles: number, client: S3Client) => {
 
     const uniqueFilename = getUniqueFilename(fileName);
 
-    // if there is no ACL passed we do not default since some providers do not support it
-    const ACL = acl ? { ACL: acl } : {};
+    const url = new URL(`/${bucket}/${uniqueFilename}`, endpoint);
 
-    const params: PutObjectCommandInput = {
-      ...ACL,
-      Bucket: bucket,
-      Key: uniqueFilename,
-      Body: data,
-      ContentType: file.contentType,
-      Metadata: {
-        // encodeURIComponent is needed to support special characters like Cyrillic
-        filename: encodeURIComponent(fileName) || "unnamed",
-      },
-    };
+    const s3Request = await signer.sign(
+      new HttpRequest({
+        method: "PUT",
+        protocol: url.protocol,
+        hostname: url.hostname,
+        path: url.pathname,
+        headers: {
+          "x-amz-date": new Date().toISOString(),
+          "Content-Type": file.contentType,
+          "Content-Length": `${data.byteLength}`,
+          "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
+          // encodeURIComponent is needed to support special characters like Cyrillic
+          "x-amz-meta-filename": encodeURIComponent(fileName) || "unnamed",
+          // when no ACL passed we do not default since some providers do not support it
+          ...(acl ? { "x-amz-acl": acl } : {}),
+        },
+        body: data,
+      })
+    );
 
-    const upload = new Upload({ client, params });
+    const response = await fetch(url, {
+      method: s3Request.method,
+      headers: s3Request.headers,
+      body: data,
+    });
 
-    AssetsUploadedSuccess.parse(await upload.done());
+    if (response.status !== 200) {
+      throw Error(`Cannot upload file ${uniqueFilename}`);
+    }
 
     const type = file.contentType.startsWith("image")
       ? ("image" as const)
