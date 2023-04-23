@@ -13,7 +13,6 @@ import { idsFormDataFieldName } from "../../schema";
 import { getUniqueFilename } from "../../utils/get-unique-filename";
 import { sanitizeS3Key } from "../../utils/sanitize-s3-key";
 import { uuidHandler } from "../../utils/uuid-handler";
-import { HttpRequest } from "@aws-sdk/protocol-http";
 
 const Ids = z.array(z.string().uuid());
 
@@ -115,25 +114,23 @@ const createUploadHandler = ({
 
     const url = new URL(`/${bucket}/${uniqueFilename}`, endpoint);
 
-    const s3Request = await signer.sign(
-      new HttpRequest({
-        method: "PUT",
-        protocol: url.protocol,
-        hostname: url.hostname,
-        path: url.pathname,
-        headers: {
-          "x-amz-date": new Date().toISOString(),
-          "Content-Type": file.contentType,
-          "Content-Length": `${data.byteLength}`,
-          "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
-          // encodeURIComponent is needed to support special characters like Cyrillic
-          "x-amz-meta-filename": encodeURIComponent(fileName) || "unnamed",
-          // when no ACL passed we do not default since some providers do not support it
-          ...(acl ? { "x-amz-acl": acl } : {}),
-        },
-        body: data,
-      })
-    );
+    const s3Request = await signer.sign({
+      method: "PUT",
+      protocol: url.protocol,
+      hostname: url.hostname,
+      path: url.pathname,
+      headers: {
+        "x-amz-date": new Date().toISOString(),
+        "Content-Type": file.contentType,
+        "Content-Length": `${data.byteLength}`,
+        "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
+        // encodeURIComponent is needed to support special characters like Cyrillic
+        "x-amz-meta-filename": encodeURIComponent(fileName) || "unnamed",
+        // when no ACL passed we do not default since some providers do not support it
+        ...(acl ? { "x-amz-acl": acl } : {}),
+      },
+      body: data,
+    });
 
     const response = await fetch(url, {
       method: s3Request.method,

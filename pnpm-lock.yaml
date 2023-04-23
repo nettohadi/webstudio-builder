@@ -366,9 +366,6 @@ importers:
       '@aws-crypto/sha256-js':
         specifier: ^4.0.0
         version: 4.0.0
-      '@aws-sdk/protocol-http':
-        specifier: ^3.310.0
-        version: 3.310.0
       '@aws-sdk/signature-v4':
         specifier: ^3.310.0
         version: 3.310.0
@@ -1396,14 +1393,6 @@ packages:
     resolution: {integrity: sha512-urnbcCR+h9NWUnmOtet/s4ghvzsidFmspfhYaHAmSRdy9yDjdjBJMFjjsn85A1ODUktztm+cVncXjQ38WCMjMQ==}
     engines: {node: '>=14.0.0'}
     dependencies:
-      tslib: 2.5.0
-    dev: false
-
-  /@aws-sdk/protocol-http@3.310.0:
-    resolution: {integrity: sha512-fgZ1aw/irQtnrsR58pS8ThKOWo57Py3xX6giRvwSgZDEcxHfVzuQjy9yPuV++v04fdmdtgpbGf8WfvAAJ11yXQ==}
-    engines: {node: '>=14.0.0'}
-    dependencies:
-      '@aws-sdk/types': 3.310.0
       tslib: 2.5.0
     dev: false
 

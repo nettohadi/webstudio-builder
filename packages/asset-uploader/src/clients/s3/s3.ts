@@ -1,5 +1,4 @@
 import { Sha256 } from "@aws-crypto/sha256-js";
-import { HttpRequest } from "@aws-sdk/protocol-http";
 import { SignatureV4 } from "@aws-sdk/signature-v4";
 import type { AssetClient } from "../../client";
 import { uploadToS3 } from "./upload";
@@ -39,18 +38,16 @@ export const createS3Client = (options: S3ClientOptions): AssetClient => {
   const deleteFile: AssetClient["deleteFile"] = async (name) => {
     const url = new URL(`/${options.bucket}/${name}`, options.endpoint);
 
-    const s3Request = await signer.sign(
-      new HttpRequest({
-        method: "DELETE",
-        protocol: url.protocol,
-        hostname: url.hostname,
-        path: url.pathname,
-        headers: {
-          "x-amz-date": new Date().toISOString(),
-          "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
-        },
-      })
-    );
+    const s3Request = await signer.sign({
+      method: "DELETE",
+      protocol: url.protocol,
+      hostname: url.hostname,
+      path: url.pathname,
+      headers: {
+        "x-amz-date": new Date().toISOString(),
+        "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
+      },
+    });
 
     await fetch(url, {
       method: s3Request.method,

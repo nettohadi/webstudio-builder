@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@aws-crypto/sha256-js": "^4.0.0",
-    "@aws-sdk/protocol-http": "^3.310.0",
     "@aws-sdk/signature-v4": "^3.310.0",
     "@remix-run/node": "1.15.0",
     "@webstudio-is/fonts": "workspace:^",
