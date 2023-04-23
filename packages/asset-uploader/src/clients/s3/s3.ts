@@ -1,3 +1,6 @@
+import { Sha256 } from "@aws-crypto/sha256-js";
+import { HttpRequest } from "@aws-sdk/protocol-http";
+import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { S3Client } from "@aws-sdk/client-s3";
 import type { AssetClient } from "../../client";
 import { uploadToS3 } from "./upload";
@@ -13,6 +16,16 @@ type S3ClientOptions = {
 };
 
 export const createS3Client = (options: S3ClientOptions): AssetClient => {
+  const signer = new SignatureV4({
+    credentials: {
+      accessKeyId: options.accessKeyId,
+      secretAccessKey: options.secretAccessKey,
+    },
+    region: options.region,
+    service: "s3",
+    sha256: Sha256,
+  });
+
   // @todo find a way to destroy this client to free resources
   const client = new S3Client({
     endpoint: options.endpoint,
@@ -22,8 +35,6 @@ export const createS3Client = (options: S3ClientOptions): AssetClient => {
       secretAccessKey: options.secretAccessKey,
     },
   });
-
-  const authorization = `AWS ${options.accessKeyId}:${options.secretAccessKey}`;
 
   const uploadFile: AssetClient["uploadFile"] = async (request) => {
     return await uploadToS3({
@@ -36,22 +47,25 @@ export const createS3Client = (options: S3ClientOptions): AssetClient => {
   };
 
   const deleteFile: AssetClient["deleteFile"] = async (name) => {
-    const url = new URL(options.endpoint);
-    url.hostname = `${options.bucket}.${url.hostname}`;
-    url.pathname = `/${name}`;
-    const headers = new Headers({
-      Authorization: authorization,
-      "x-amz-region": options.region,
-    });
-    console.log(headers);
-    const response = await fetch(url, {
-      method: "DELETE",
-      headers,
-    });
+    const url = new URL(`/${options.bucket}/${name}`, options.endpoint);
 
-    console.log("==============");
-    console.log(response.text());
-    console.log("==============");
+    const request = await signer.sign(
+      new HttpRequest({
+        method: "DELETE",
+        protocol: url.protocol,
+        hostname: url.hostname,
+        path: url.pathname,
+        headers: {
+          "x-amz-date": new Date().toISOString(),
+          "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
+        },
+      })
+    );
+
+    await fetch(url, {
+      method: request.method,
+      headers: request.headers,
+    });
   };
 
   return {
