@@ -263,19 +263,17 @@ type JSONResult = Array<EmbedTemplateInstance | EmbedTemplateText>
 Below is an example of valid output:
 
 \`\`\`json
-{
-  "instances": [
-    { type: "text", value: "hello" },
-    {
-      type: "instance",
-      component: "Box",
-      children: [
-        { type: "instance", component: "Box", children: [] },
-        { type: "text", value: "world" },
-      ],
-    },
-  ]
-}
+[
+  { type: "text", value: "hello" },
+  {
+    type: "instance",
+    component: "Box",
+    children: [
+      { type: "instance", component: "Box", children: [] },
+      { type: "text", value: "world" },
+    ],
+  },
+]
 \`\`\``,
   styles: `The JSON above describes <!--prompt-content-->.
 
