@@ -23,6 +23,8 @@ import {
   synchronizedInstancesStores,
   synchronizedBreakpointsStores,
   selectedStyleSourceSelectorStore,
+  componentMetasStore,
+  componentPropMetasStore,
 } from "~/shared/nano-states";
 
 enableMapSet();
@@ -64,6 +66,8 @@ export const registerContainers = () => {
   store.register("props", propsStore);
   store.register("assets", assetsStore);
   // synchronize whole states
+  clientStores.set("componentMetasStore", componentMetasStore);
+  clientStores.set("componentPropMetasStore", componentPropMetasStore);
   clientStores.set("selectedPageId", selectedPageIdStore);
   clientStores.set("selectedInstanceSelector", selectedInstanceSelectorStore);
   clientStores.set(
@@ -160,6 +164,7 @@ const syncStoresState = (name: SyncEventSource, publish: Publish) => {
 
   const unsubscribes: Array<() => void> = [];
   for (const [namespace, store] of clientStores) {
+    console.log("in", window.location.href, "subscribe to", namespace);
     unsubscribes.push(
       // use listen to not invoke initially
       store.listen((value) => {

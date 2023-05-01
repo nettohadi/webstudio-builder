@@ -17,8 +17,14 @@ import {
   NestedSelectButton,
 } from "@webstudio-is/design-system";
 import { ChevronDownIcon } from "@webstudio-is/icons";
+import { useStore } from "@nanostores/react";
 import type { Publish } from "~/shared/pubsub";
-import { propsStore, useInstanceProps } from "~/shared/nano-states";
+import {
+  componentMetasStore,
+  componentPropMetasStore,
+  propsStore,
+  useInstanceProps,
+} from "~/shared/nano-states";
 import { CollapsibleSectionWithAddButton } from "~/builder/shared/collapsible-section";
 import {
   useStyleData,
@@ -32,11 +38,7 @@ import {
 } from "./use-props-logic";
 import { getLabel } from "./shared";
 import { useState, type ReactNode } from "react";
-import {
-  getComponentPropsMeta,
-  getComponentMeta,
-  type WsComponentMeta,
-} from "@webstudio-is/react-sdk";
+import { type WsComponentMeta } from "@webstudio-is/react-sdk";
 import { getInstanceLabel } from "~/builder/shared/tree";
 
 const itemToString = (item: NameAndLabel | null) =>
@@ -249,12 +251,15 @@ export const PropsPanelContainer = ({
   publish: Publish;
   selectedInstance: Instance;
 }) => {
-  const propsMeta = getComponentPropsMeta(instance.component);
+  const propsMetas = useStore(componentPropMetasStore);
+  const metas = useStore(componentMetasStore);
+
+  const propsMeta = propsMetas[instance.component];
   if (propsMeta === undefined) {
     throw new Error(`Could not get meta for compoent "${instance.component}"`);
   }
 
-  const componentMeta = getComponentMeta(instance.component);
+  const componentMeta = metas[instance.component];
   if (componentMeta === undefined) {
     throw new Error(`Could not get meta for compoent "${instance.component}"`);
   }

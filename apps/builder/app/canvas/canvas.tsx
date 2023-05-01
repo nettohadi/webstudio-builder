@@ -1,7 +1,12 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { useStore } from "@nanostores/react";
 import { computed } from "nanostores";
-import type { Params } from "@webstudio-is/react-sdk";
+import {
+  getComponentMeta,
+  getComponentNames,
+  getComponentPropsMeta,
+  type Params,
+} from "@webstudio-is/react-sdk";
 import type { Instances, Page } from "@webstudio-is/project-build";
 import {
   createElementsTree,
@@ -31,6 +36,8 @@ import {
   instancesStore,
   useIsPreviewMode,
   selectedPageStore,
+  componentMetasStore,
+  componentPropMetasStore,
 } from "~/shared/nano-states";
 import { useDragAndDrop } from "./shared/use-drag-drop";
 import { useCopyPaste } from "~/shared/copy-paste";
@@ -123,6 +130,33 @@ type CanvasProps = {
   getComponent: GetComponent;
 };
 
+const useRegisterComponents = () => {
+  const isRegistered = useRef(false);
+
+  if (isRegistered.current === false) {
+    registerComponents(customComponents);
+    registerComponentMetas(customComponentMetas);
+    registerComponentPropsMetas(customComponentPropsMetas);
+    isRegistered.current = true;
+  }
+
+  const handshaken = useStore(handshakenStore);
+
+  useEffect(() => {
+    if (handshaken && Object.entries(componentMetasStore.get()).length === 0) {
+      const metas = {};
+      const propsMetas = {};
+      for (const name of getComponentNames()) {
+        metas[name] = getComponentMeta(name);
+        propsMetas[name] = getComponentPropsMeta(name);
+      }
+      console.log("Writing component metas to store");
+      componentMetasStore.set(metas);
+      componentPropMetasStore.set(propsMetas);
+    }
+  }, [handshaken]);
+};
+
 export const Canvas = ({
   params,
   getComponent,
@@ -132,9 +166,7 @@ export const Canvas = ({
   useCanvasStore(publish);
   const [isPreviewMode] = useIsPreviewMode();
 
-  registerComponents(customComponents);
-  registerComponentMetas(customComponentMetas);
-  registerComponentPropsMetas(customComponentPropsMetas);
+  useRegisterComponents();
 
   // e.g. toggling preview is still needed in both modes
   useCanvasShortcuts();
